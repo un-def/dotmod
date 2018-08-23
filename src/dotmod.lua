@@ -1,7 +1,9 @@
-local orig_require = _G.require
-local orig_lua_searcher = package.searchers[2]
-
 local dirsep = package.config:sub(1, 1)
+-- LuaJIT compat
+local searchers = package.searchers or package.loaders
+
+local orig_require = _G.require
+local orig_lua_searcher = searchers[2]
 
 
 local function get_requiring_modname()
@@ -71,7 +73,7 @@ local function dotmod_lua_searcher(modname)
   end
 
   local file = assert(io.open(path, 'rb'))
-  local code = file:read('a')
+  local code = file:read('*a')
   local injected_vars = ('local __name, __file = %q, %q\n\n'):format(modname, path)
 
   local loader
@@ -98,7 +100,7 @@ local _M = {}
 
 function _M.enable()
   _G.require = dotmod_require
-  package.searchers[2] = dotmod_lua_searcher
+  searchers[2] = dotmod_lua_searcher
   -- XXX: normalize path
   local path = debug.getinfo(2, 'S').source:match('^@?(.+)')
   local name = path:match('^%.*' .. dirsep .. '?([^.]+)')
@@ -110,7 +112,7 @@ end
 
 function _M.disable()
   _G.require = orig_require
-  package.searchers[2] = orig_lua_searcher
+  searchers[2] = orig_lua_searcher
 end
 
 return _M
