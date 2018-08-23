@@ -99,6 +99,13 @@ local _M = {}
 function _M.enable()
   _G.require = dotmod_require
   package.searchers[2] = dotmod_lua_searcher
+  -- XXX: normalize path
+  local path = debug.getinfo(2, 'S').source:match('@?(.+)')
+  local name = path:match('[^.]+')
+  if not name then
+    return nil, path
+  end
+  return name:gsub(dirsep, '.'), path
 end
 
 function _M.disable()
