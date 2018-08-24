@@ -5,6 +5,11 @@ local searchers = package.searchers or package.loaders
 local orig_require = _G.require
 local orig_lua_searcher = searchers[2]
 
+-- a set of modnames that seem to be packages,
+-- that is, if `foo.bar` resolves to `foo/bar/init.lua`,
+-- then this table will contain `["foo.bar"] = true` entry
+local package_modnames = {}
+
 
 local function get_requiring_modname()
   local level = 4
@@ -52,16 +57,26 @@ local function build_absolute_modname(modname)
 end
 
 
-local function expand_package_modname(modname)
-  local path = package.searchpath(modname, package.path)
-  if path then
-    local package_path_endswith = ('%s%sinit.lua'):format(modname:gsub('%.', dirsep), dirsep)
-    local _, stop = path:find(package_path_endswith, 1, true)
-    if stop and stop == #path then
-      modname = modname .. '.init'
-    end
+local function is_package_modname(modname)
+  -- maybe we already know that modname is a package?
+  if package_modnames[modname] then
+    return true
   end
-  return modname
+  -- try to resolve modname to file path using Lua standard library function
+  local path = package.searchpath(modname, package.path)
+  if not path then
+    return false
+  end
+  -- if package.searchpath has resolved `foo.bar` to `foo/bar/init.lua`,
+  -- then we assume that `foo.bar` is a package
+  local package_path_endswith = ('%s%sinit.lua'):format(modname:gsub('%.', dirsep), dirsep)
+  local _, stop = path:find(package_path_endswith, 1, true)
+  if stop and stop == #path then
+    -- cache the result of this check to avoid future checks
+    package_modnames[modname] = true
+    return true
+  end
+  return false
 end
 
 
@@ -87,11 +102,26 @@ end
 
 
 local function dotmod_require(modname)
+  -- expand relative modname to absolute
+  -- or do nothing if it is already absolute
   local abs_modname, err = build_absolute_modname(modname)
   if not abs_modname then
     error(("error loading module '%s':\n\t%s"):format(modname, err))
   end
-  abs_modname = expand_package_modname(abs_modname)
+  -- maybe modname is already loaded?
+  local loaded = package.loaded[abs_modname]
+  if loaded ~= nil then
+    return loaded
+  end
+  -- maybe modname is a package?
+  if is_package_modname(abs_modname) then
+    abs_modname = abs_modname .. '.init'
+    -- maybe modname.init is already loaded?
+    loaded = package.loaded[abs_modname]
+    if loaded ~= nil then
+      return loaded
+    end
+  end
   return orig_require(abs_modname)
 end
 
