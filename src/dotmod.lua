@@ -1,3 +1,10 @@
+--- Relative imports with `require()` for pure Lua modules.
+-- @module dotmod
+-- @author un.def
+-- @copyright 2018
+-- @license MIT
+
+
 local dirsep = package.config:sub(1, 1)
 -- LuaJIT compat
 local searchers = package.searchers or package.loaders
@@ -5,12 +12,19 @@ local searchers = package.searchers or package.loaders
 local orig_require = _G.require
 local orig_lua_searcher = searchers[2]
 
--- a set of modnames that seem to be packages,
--- that is, if `foo.bar` resolves to `foo/bar/init.lua`,
--- then this table will contain `["foo.bar"] = true` entry
+
+--- A set of modnames that seem to be packages.
+-- That is, if `foo.bar` resolves to `foo/bar/init.lua`,
+-- then this table will contain `["foo.bar"] = true` entry.
+-- @local
 local package_modnames = {}
 
 
+--- Get the absolute name (`foo.bar.baz`) of the module that is `require()`'ing.
+-- The function inspects the call stack for the nearest function (chunk)
+-- with `__name` local variable and returns its value.
+-- @local
+-- @return absolute name on success, or `nil` and a string describing the error otherwise.
 local function get_requiring_modname()
   local level = 4
   while true do
