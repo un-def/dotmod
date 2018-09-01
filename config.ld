@@ -1,5 +1,6 @@
-title = 'dotmod'
 project = 'dotmod'
-file = 'src/dotmod.lua'
+title = 'dotmod documentation'
 format = 'markdown'
 all = true
+file = 'src/dotmod.lua'
+dir = 'docs'
