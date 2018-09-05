@@ -4,3 +4,4 @@ format = 'markdown'
 all = true
 file = 'src/dotmod.lua'
 dir = 'docs'
+style='!fixed'
